@@ -1,0 +1,3 @@
+frumblesnatch-v1 vs python-algo: damage_received_1: 0, damage_received_2: 36, winner: frumblesnatch-v1
+frumblesnatch-v1 vs snorkeldink-v3-3: damage_received_1: 0, damage_received_2: 0, winner: snorkeldink-v3-3
+python-algo vs snorkeldink-v3-3: damage_received_1: 36, damage_received_2: 0, winner: snorkeldink-v3-3
