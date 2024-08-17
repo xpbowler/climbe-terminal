@@ -113,7 +113,7 @@ def run_match(arg1='', arg2='', max_name_len=0):
 	is_windows = sys.platform.startswith('win')
 
 	# Set default path for algos if script is run with no params
-	default_algo = parent_dir + "\\algos\\starter-algo-ZIPME\\run.ps1" if is_windows else parent_dir + "/algos/starter-algo-ZIPME/run.sh" 
+	default_algo = parent_dir + "\\starter-algo-ZIPME\\run.ps1" if is_windows else parent_dir + "/starter-algo-ZIPME/run.sh" 
 	algo1 = default_algo
 	algo2 = default_algo
 
@@ -140,6 +140,8 @@ def run_match(arg1='', arg2='', max_name_len=0):
 			trailing_char = "" if algo2.endswith('/') else "/"
 			algo2 = algo2 + trailing_char + "run.sh"
 
+	algo1 = algo1.replace('algos/','')
+	algo2 = algo2.replace('algos/','')
 	run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2), algo1.split('/')[-2].replace('algos/',''),  algo2.split('/')[-2].replace('algos/',''), max_name_len)
 
 # handles all the arguments
