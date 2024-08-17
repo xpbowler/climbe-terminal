@@ -105,7 +105,7 @@ def run_single_game(process_command, algo1, algo2, max_name_len):
 
 def run_match(arg1='', arg2='', max_name_len=0):
 	# Get location of this run file
-	file_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\contributions', '')
+	file_dir = os.path.dirname(os.path.realpath(__file__)).replace('/contributions', '')
 	parent_dir = os.path.join(file_dir, os.pardir)
 	parent_dir = os.path.abspath(parent_dir)
 
@@ -140,7 +140,7 @@ def run_match(arg1='', arg2='', max_name_len=0):
 			trailing_char = "" if algo2.endswith('/') else "/"
 			algo2 = algo2 + trailing_char + "run.sh"
 
-	run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2), algo1.split('\\')[-2].replace('algos/',''),  algo2.split('\\')[-2].replace('algos/',''), max_name_len)
+	run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2), algo1.split('/')[-2].replace('algos/',''),  algo2.split('/')[-2].replace('algos/',''), max_name_len)
 
 # handles all the arguments
 def parse_args():
@@ -168,7 +168,7 @@ def parse_args():
 
 # called by the -a arg, runs every algo in directory
 def run_all():
-	algos_dir = os.path.dirname(os.path.realpath(__file__)).replace('scripts\\contributions', '')+'algos\\'
+	algos_dir = os.path.dirname(os.path.realpath(__file__)).replace('scripts/contributions', '')+'/algos'
 	algos = os.listdir(algos_dir)
 	matches = itertools.combinations(algos, 2)
 	return matches
