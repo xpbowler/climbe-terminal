@@ -1,0 +1,10 @@
+Random seed: 4259409676987260059
+---------------- Starting Your Algo --------------------
+Traceback (most recent call last):
+  File "/u2/e256zhang/climbe-terminal/snorkeldink-v3-3/algo_strategy.py", line 129, in <module>
+    algo.start()
+  File "/u2/e256zhan/climbe-terminal/snorkeldink-v3-3/gamelib/algocore.py", line 60, in start
+    game_state_string = get_command()
+  File "/u2/e256zhan/climbe-terminal/snorkeldink-v3-3/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 echo "Run Match"
-defaultAlgo=$PWD/snorkeldink-v3-3
-anotherAlgo=$PWD/python-algo
+defaultAlgo=$PWD/bluecheese
+anotherAlgo=$PWD/cheese-v2
 
 algo1=${1:-${defaultAlgo}}
 algo1=${algo1%/}

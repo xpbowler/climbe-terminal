@@ -83,10 +83,10 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         support_positions = [[4,11],[5,11],[6,11],[5,10],[6,10],[7,10],[6,9],[7,9],[8,9]]
         for support_position in support_positions:
-            game_state.attempt_spawn(SUPPORT, support_position)
-            game_state.attempt_upgrade(SUPPORT, support_position)
+            game_state.attempt_spawn(SUPPORT, [support_position])
+            game_state.attempt_upgrade([support_position])
 
-        game_state.attempt_spawn(SCOUT, [14, 0], 1000)
+        game_state.attempt_spawn(SCOUT, [[14, 0]], 20)
 
 if __name__ == "__main__":
     algo = AlgoStrategy()
