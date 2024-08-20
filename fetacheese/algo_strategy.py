@@ -27,25 +27,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
         MP = 1
         SP = 0
-        
-        self.priority_edge = [[TURRET, 3, 12], [TURRET, 21,11],[WALL,21,12],[TURRET,5,12],[WALL,5,13],[TURRET,25,11]]
-        self.left_edge = [[0,13]]
-        self.right_edge =[]
-        self.left_hook = [[5,13],[6,12],[7,9],[9,8],[10,8]]
-        self.right_hook = [[14,8],[15,8],[16,8]]
-        self.front_tunnel = []
-        self.back_tunnel = [[24,11],[23,10],[22,9],[21,8]]
-        self.front_tunnel_turrets = [[21,11],[19,9]]
-        self.back_tunnel_turrets = [[25,11],[24,10],[23,9]]
-        self.jibbit = [19,13]
-        self.supports = [[4,9],[5,8],[6,7],[7,6],[8,6],[9,6],[10,6],[11,6],[12,6],[13,6]]
 
-        # maybe change later since could be compromising hook
-        self.left_edge_holes = [[2,13],[6,12],[6,11]]
         self.scored_on_locations = []
-        self.damaged_regions = [0,0,0,0] # left, left-middle, right-middle, right
 
-        self.scouts = [[3,10]]
+        self.turrets = [[]]
+
+        self.scouts = [[12,1],[15,1]]
 
     def on_turn(self, turn_state):
         """
@@ -78,35 +65,20 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         # Setup main defense stucture
         self.build_defences(game_state)
-        # Build peripheral defenses. Order is reactive to where opponent focuses their offense
-        # self.build_reactive_defense(game_state)
-
-        # if left+right hook not built, stall with interceptors
-        if not all(map(game_state.contains_stationary_unit, (self.left_hook + self.right_hook))):
-            self.stall_with_interceptors(game_state)
-        else:
-            # Now let's analyze the enemy base to see where their defenses are concentrated.
-            # If they have many units in the front we can build a line for our demolishers to attack them at long range.
-            # if self.detect_enemy_unit(game_state, unit_type=None, valid_x=None, valid_y=[14, 15]) > 10:
-            if 1==1: #not using this rn
-                self.demolisher_line_strategy(game_state)
-            else:
-                # analyze if enemy defense is concentrated on left or right side
-                # open a hole in the left edge if enemy defense is weak on the left side
-                if self.should_right_be_open: 
-                    # dont open hole in left edge
-                    # we want to send a lot of scouts at once (16+)
-                    if game_state.MP > 18:
-                        game_state.attempt_spawn(SCOUT, self.scouts[0],1000)
-
-                    # spawn jibbit to force enemy away from walls
-                    game_state.attempt_spawn(WALL, self.jibbit)
-                    # spawn supports with leftover SP (once all defenses are placed down and upgraded)
-                    game_state.attempt_spawn(SUPPORT, self.supports)
-                else:
-                    # open hole in left edge
-                    game_state.attempt_delete(self.left_edge_holes)
-                    
+        # Now let's analyze the enemy base to see where their defenses are concentrated.
+        # If they have many units in the front we can build a line for our demolishers to attack them at long range.
+        # if self.detect_enemy_unit(game_state, unit_type=None, valid_x=None, valid_y=[14, 15]) > 10:
+        # if 1==1: #not using this rn
+        #     self.demolisher_line_strategy(game_state)
+        # else:
+        #     # send scouts to weaker side
+        #     if self.should_right_be_open: 
+        #         # we want to send a lot of scouts at once (16+)
+        #         if game_state.MP > 18:
+        #             game_state.attempt_spawn(SCOUT, self.scouts[1],1000)
+        #     else:
+        #         if game_state.MP > 18:
+        #             game_state.attempt_spawn(SCOUT, self.scouts[0],1000)
 
     def build_defences(self, game_state):
         """
@@ -116,19 +88,28 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Useful tool for setting up your base locations: https://www.kevinbai.design/terminal-map-maker
         # More community tools available at: https://terminal.c1games.com/rules#Download
 
+        if game_state.turn_number != 0 and game_state.turn_number%4 == 0:
+            # spawn supports
+            support_locations = [[12,6],[15,6],[12,5],[15,5],[12,4],[15,4],[12,3],[15,3]]
+            game_state.attempt_spawn(SUPPORT, support_locations)
         # initial setup
-        turret_locations = [[4,12],[25,12],[20,10]] # removed [11,8]
-        game_state.attempt_spawn(TURRET, turret_locations)
-        game_state.attempt_upgrade(turret_locations)
-        wall_locations = [[4,13],[25,13]]
-        game_state.attempt_spawn(WALL, wall_locations)
-        game_state.attempt_upgrade(wall_locations)
+        turret_locations = [[4,12],[25,12],[11,8],[20,10],[3,13],[26,13],[6,10],[15,8],[2,13],[27,13],[6,11],[22,12],[12,8],[21,12],[19,10],[8,8],[17,8],[1,13],[6,12],[24,12],[13,8],[18,9]]
+        for loc in turret_locations:
+            game_state.attempt_spawn(TURRET, [loc])
+            game_state.attempt_upgrade([loc])
 
-        # setup edges
-        self.spawn_units(game_state,self.priority_edge)
-        game_state.attempt_spawn(WALL, self.left_edge)
-        game_state.attempt_spawn(WALL, self.right_edge)
+        # right_wall_holes = [[]]
+        # left_wall_holes = [[]]
+        if self.should_right_be_open:
+            # open hole on left --> scouts will go to right side
+            pass
+        else:
+            # open hole on right --> scouts will go to left side
+            pass
 
+        # wall_holes = [[0,13],[5,12],[7,9],[9,8],[10,8],[14,8],[16,8],[21,11],[23,12]]
+        # game_state.attempt_spawn(WALL, wall_holes)
+        # game_state.attempt_remove([random.choice(wall_holes)])
 
     def build_reactive_defense(self, game_state):
         """
@@ -137,16 +118,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         as shown in the on_action_frame function
         """
 
-        game_state.attempt_spawn(WALL, self.left_hook)
-        game_state.attempt_spawn(WALL, self.right_hook)
+        game_state.attempt_spawn(TURRET, self.left_hook)
+        game_state.attempt_spawn(TURRET, self.right_hook)
 
-        game_state.attempt_spawn(WALL, self.front_tunnel)
+        game_state.attempt_spawn(TURRET, self.front_tunnel)
 
         game_state.attempt_spawn(TURRET, self.front_tunnel_turrets)
         game_state.attempt_upgrade(self.front_tunnel_turrets)
 
         # fill out tunnel
-        game_state.attempt_spawn(WALL, self.back_tunnel)
+        game_state.attempt_spawn(TURRET, self.back_tunnel)
         game_state.attempt_spawn(TURRET, self.back_tunnel_turrets)
         game_state.attempt_upgrade(self.back_tunnel_turrets)
 
@@ -239,14 +220,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 # gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
                 # gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
-        damages = events["damage"]
-        for damage in damages:
-            location = damage[0]
-            unit_owner_self = True if damage[4] == 1 else False
-            if unit_owner_self:
-                # gamelib.debug_write("Got scored on at: {}".format(location))
-                region = location[0] // 8
-                self.damaged_regions[region] += damage[1]
 
     def should_right_be_open(self, game_state, weights=None):
         if not weights:

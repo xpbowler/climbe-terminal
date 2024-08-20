@@ -1,0 +1,10 @@
+Random seed: 7534063451818737894
+---------------- Starting Your Algo --------------------
+Traceback (most recent call last):
+  File "/u2/e256zhang/climbe-terminal/fetacheese/algo_strategy.py", line 270, in <module>
+    algo.start()
+  File "/u2/e256zhan/climbe-terminal/fetacheese/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/u2/e256zhan/climbe-terminal/fetacheese/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt
