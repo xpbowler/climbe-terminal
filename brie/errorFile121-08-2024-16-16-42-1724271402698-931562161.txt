@@ -1,0 +1,18 @@
+Random seed: 9074762504497931732
+---------------- Starting Your Algo --------------------
+Configuring your custom algo strategy...
+Performing turn 0 of your custom algo strategy
+Traceback (most recent call last):
+  File "/u2/e256zhang/climbe-terminal/brie/algo_strategy.py", line 384, in <module>
+    else:
+  File "/u2/e256zhan/climbe-terminal/brie/gamelib/algocore.py", line 74, in start
+    self.on_turn(game_state_string)
+  File "/u2/e256zhang/climbe-terminal/brie/algo_strategy.py", line 92, in on_turn
+    self.starter_strategy(game_state)
+  File "/u2/e256zhang/climbe-terminal/brie/algo_strategy.py", line 111, in starter_strategy
+    self.build_defences_stage_2(game_state)
+  File "/u2/e256zhang/climbe-terminal/brie/algo_strategy.py", line 240, in build_defences_stage_2
+    self.evenly_strengthen(turrets, [1.4,1.4,1],game_state)
+  File "/u2/e256zhang/climbe-terminal/brie/algo_strategy.py", line 208, in evenly_strengthen
+    self.attempt_spawn_and_upgrade(game_state,turrets[weakest_index])
+AttributeError: 'AlgoStrategy' object has no attribute 'attempt_spawn_and_upgrade'

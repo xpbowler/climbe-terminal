@@ -1,0 +1,12 @@
+Random seed: 357319708218652803
+---------------- Starting Your Algo --------------------
+Configuring your custom algo strategy...
+Performing turn 0 of your custom algo strategy
+Traceback (most recent call last):
+  File "/u2/e256zhang/climbe-terminal/cheddar-v2-2/algo_strategy.py", line 498, in <module>
+    algo.start()
+  File "/u2/e256zhan/climbe-terminal/cheddar-v2-2/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/u2/e256zhan/climbe-terminal/cheddar-v2-2/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt

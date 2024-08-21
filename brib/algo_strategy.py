@@ -41,41 +41,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
         MP = 1
         SP = 0
+        # This is a good place to do initial setup
+        self.scored_on_locations = []
+
+
         self.scored_on_locations = []
         self.to_upgrade = []
-        self.damaged_regions = [0,0,0,0] # left, left-middle, right-middle, right
 
-        self.back_support_locations = []
-        self.is_edge_spam_threshold = 0
-        self.is_left_edge_spam = 0
-        self.is_right_edge_spam = 0
-        self.is_middle_spam = 0
-        limit = [13,14]
-        for i in range(0,5):
-            for j in range(limit[0],limit[1]+1):
-                self.back_support_locations.append([j,i])
-                limit[0] -= 1
-                limit[1] += 1
-        self.prev_turn_info = 0
 
         self.attack_location = None
-        self.start_attack_turn = 2
-        self.attacks_left = 3
-
-        self.middle_health = 0
-        self.left_health = 0
-        self.right_health = 0
-        self.health_weights = [1,3]
-
-        self.left_final_turrets = []
-        for i in range(1,9):
-            self.left_final_turrets.append([i,12])
-        self.right_final_turrets = []
-        for i in range(8,19):
-            self.right_final_turrets.append([i,12])
-        self.middle_final_turrets = []
-        for i in range(18,28):
-            self.middle_final_turrets.append([i,12])
+        self.start_attack_turn = 1
 
     def on_turn(self, turn_state):
         """
@@ -108,8 +83,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         self.attack(game_state)
         self.build_defences(game_state)
-        self.adaptive_defence(game_state)
-        self.build_defences_stage_2(game_state)
 
     def attack(self, game_state):
         attack_options = [[0,13],[5,8],[22,8],[27,13]]
@@ -197,17 +170,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         return quadrants.index(min(quadrants))
 
-    def evenly_strengthen(self, turrets, multipliers, game_state):
-        # division for three sections is 8 and 18. 
-        # left: 0-8
-        # middle: 8-18
-        # right: 18-27
-        # strengthen the weakest part
-
-        strengths = [self.left_health*multipliers[0], self.right_health*multipliers[1], self.middle_health*multipliers[2]]
-        weakest_index = strengths.index(min(strengths))
-        self.attempt_spawn_and_upgrade(game_state,turrets[weakest_index])
-
     def build_defences(self, game_state):
         """
         Build basic defenses using hardcoded locations.
@@ -228,46 +190,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         game_state.attempt_upgrade([[24,13],[13,12]]) # right & mid
         game_state.attempt_spawn(TURRET, [[6,13]])
         game_state.attempt_upgrade([[6,13],[14,12]])
-        game_state.attempt_spawn(TURRET, [[2,13]])
+        game_state.attempt_spawn(TURRET, [[21,13]])
         game_state.attempt_upgrade([[21,13]])
-
-    def adaptive_defence(self, game_state):
-        pass
-
-    def build_defences_stage_2(self, game_state):
-        turrets = [
-            [[3,12],[4,12],[5,12]],
-            [[24,12],[23,12],[22,12]],
-            [[13,12],[11,12],[16,12],[9,12],[18,12]]
-        ]
-
-        self.evenly_strengthen(turrets, [1.4,1.4,1],game_state)
-
-        new_turrets = [[9,12],[16,12],[3,12],[24,12],[18,12],[5,12]]
-        self.attempt_spawn_and_upgrade(game_state, new_turrets)
-        edge_walls = [[0,13],[27,13],[1,13],[26,13],[2,13],[25,13]]
-        for location in edge_walls:
-            game_state.attempt_spawn(WALL,location)
-            game_state.attempt_upgrade(location)
-        new_turrets_2 = [22,12],[2,12],[25,12]
-        self.attempt_spawn_and_upgrade(game_state, new_turrets_2)
-        
-        self.evenly_strengthen([self.left_final_turrets, self.right_final_turrets, self.middle_final_turrets],[1,1,1],game_state)
-        # now we can start opening holes
-
-    def attempt_spawn_and_upgrade(self, game_state, locations):
-        for location in locations:
-            # choice = random.randint(0,1)
-            # if choice == 0:
-            game_state.attempt_spawn(TURRET,location)
-            game_state.attempt_upgrade(location)
-            game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-            game_state.attempt_upgrade([location[0], location[1] + 1])
-            # else:
-            #     game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-            #     game_state.attempt_upgrade([location[0], location[1] + 1])
-            #     game_state.attempt_spawn(TURRET,location)
-            #     game_state.attempt_upgrade(location)
 
     def random_valid_attack(self, game_state, location_options):
         """
@@ -343,84 +267,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
                 gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
-        
-        self.analyze_enemy_moves_and_our_defense(state, events)
-
-    
-    def analyze_enemy_moves_and_our_defense(self, state, events):
-        spawns = events['spawn']
-        num_left_scouts_spawned = num_right_scouts_spawned = num_middle_scouts_spawned = 0
-        self.is_left_edge_spam = self.is_right_edge_spam = 0
-
-        for spawn in spawns:
-            if spawn[1] == 3:
-                if spawn[0][1] >= 22:
-                    if spawn[0][0] <= 13:
-                        num_left_scouts_spawned += 1
-                    else:
-                        num_right_scouts_spawned += 1
-                elif 20 <= spawn[0][1] <= 23:
-                    num_middle_scouts_spawned += 1
-
-        if num_left_scouts_spawned >= 5:
-            self.is_left_edge_spam += 1 
-        if num_right_scouts_spawned >= 5:
-            self.is_right_edge_spam += 1 
-        if num_middle_scouts_spawned >= 5:
-            self.is_middle_spam += 1
-        # assess at the end of action --> going into deploy phase
-        # get the health of middle left and right
-        # turret health is 3x more valuable than wall healths
-
-        self.left_health = 0
-        self.right_health = 0
-        self.middle_health = 0
-        units = state["p1Units"]
-        walls= units[0]
-        turrets = units[2]
-
-        for wall in walls:
-            if wall[1]==13:
-                if wall[0] < 8:
-                    self.left_health += wall[2]
-                elif wall[0] >= 8 and wall[0] <= 18:
-                    self.middle_health += wall[2]
-                else:
-                    self.right_health += wall[2]
-        for turret in turrets:
-            if turret[1]==12:
-                if turret[0] < 8:
-                    self.left_health += turret[2]*3
-                elif turret[0] >= 8 and turret[0] <= 18:
-                    self.middle_health += turret[2]*3
-                else:
-                    self.right_health += turret[2]*3  
-
-    def is_edge_spam(self, game_state):
-        # check for support at the back 
-        for location in self.back_support_locations:
-            if game_state.contains_stationary_unit(location):
-                self.is_edge_spam_threshold += 1
-                break
-
-        # variable is updated if they spam scouts in the back
-        
-        if self.is_edge_spam_threshold + self.is_left_edge_spam + self.is_right_edge_spam >= 2: 
-            return True
-        else:
-            return False
-    
-    def alot_edge_spam(self, game_state):
-        # check for support at the back 
-        for location in self.back_support_locations:
-            if game_state.contains_stationary_unit(location):
-                self.is_edge_spam_threshold += 1
-                break
-            
-        if self.is_edge_spam_threshold + self.is_left_edge_spam + self.is_right_edge_spam >= 2.75:
-            return True
-        else:
-            return False 
 
 
 if __name__ == "__main__":

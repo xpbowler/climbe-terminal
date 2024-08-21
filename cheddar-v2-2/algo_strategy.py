@@ -48,7 +48,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
         MP = 1
         SP = 0
-        # This is a good place to do initial setup
         self.scored_on_locations = []
         self.to_upgrade = []
         self.damaged_regions = [0,0,0,0] # left, left-middle, right-middle, right
