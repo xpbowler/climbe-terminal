@@ -1,0 +1,4 @@
+  File "/u2/e256zhang/climbe-terminal/cheddar-v2-2/algo_strategy.py", line 288
+    if self.prev_turn_info == 1 and turn_info = 0:
+                                              ^
+SyntaxError: invalid syntax

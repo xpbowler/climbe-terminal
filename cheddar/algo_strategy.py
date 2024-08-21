@@ -113,7 +113,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             edge_walls = [[0,13],[27,13],[1,13],[26,13],[2,13],[25,13]]
             for location in edge_walls:
                 game_state.attempt_spawn(WALL,location)
-                game_state.attempt_upgrade(location)
+                game_state.attempt_upg<ade(location)
 
             game_state.attempt_upgrade(third_turrets)
 

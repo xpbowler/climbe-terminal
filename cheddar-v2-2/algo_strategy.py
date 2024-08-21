@@ -1,10 +1,17 @@
 import gamelib
 import random
-import math
-import warnings
 from sys import maxsize
+from gamelib.unit import GameUnit
 import json
 
+"""
+# TODO:
+1. +random(2,3) for attack
+2. predict & intercept
+3. consider putting support on top first
+5. side strat to destroy support along side
+6. spam middle
+"""
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -50,6 +57,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.is_edge_spam_threshold = 0
         self.is_left_edge_spam = 0
         self.is_right_edge_spam = 0
+        self.is_middle_spam = 0
         limit = [13,14]
         for i in range(0,5):
             for j in range(limit[0],limit[1]+1):
@@ -59,8 +67,23 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.prev_turn_info = 0
 
         self.attack_location = None
-        self.start_attack_turn = 3
+        self.start_attack_turn = 2
         self.attacks_left = 3
+
+        self.middle_health = 0
+        self.left_health = 0
+        self.right_health = 0
+        self.health_weights = [1,3]
+
+        self.left_final_turrets = []
+        for i in range(1,9):
+            self.left_final_turrets.append([i,12])
+        self.right_final_turrets = []
+        for i in range(8,19):
+            self.right_final_turrets.append([i,12])
+        self.middle_final_turrets = []
+        for i in range(18,28):
+            self.middle_final_turrets.append([i,12])
 
     def on_turn(self, turn_state):
         """
@@ -101,97 +124,231 @@ class AlgoStrategy(gamelib.AlgoCore):
         Remember to defend corners and avoid placing units in the front where enemy demolishers can attack them.
         """
 
-        # initial defense
-        turrets = [[10,12],[17,12],[4,12],[23,12]]
-        walls = [[10,13],[17,13],[4,13],[23,13]]
-
-        game_state.attempt_spawn(TURRET, turrets) 
-        game_state.attempt_upgrade(turrets)
+        # basic initial defense
+        # change from 4,12 and 23, 12 to 3,12 and 24,12
+        # this is meant to counter the meta
+        turrets = [[10,12],[17,12],[3,12],[24,12]]
+        walls = [[3,13],[24,13],[10,13],[17,13]]
+        
+        game_state.attempt_spawn(TURRET, turrets)
         game_state.attempt_spawn(WALL, walls)
+        game_state.attempt_upgrade(turrets)
         game_state.attempt_upgrade(walls)
 
-        # determine if enemy is edge spammer or they spawn randomly
+        if self.is_middle_spam >= 2:
+            # beef up the middle
+            middle_turrets = [[11,12],[16,12]]
+            self.attempt_spawn_and_upgrade(game_state, middle_turrets)
+            self.is_middle_spam -= 1
+
+        # beef up edges if enemy is edge spammer
         if self.is_edge_spam(game_state):
-            # spawn turrets on the edges
-            if self.is_left_edge_spam < self.is_right_edge_spam: 
+            # spawn turrets on the edges depending on which side is weaker
+            gamelib.debug_write(f"Left health: {self.left_health}\nRight health: {self.right_health}")
+            if self.right_health > self.left_health:
                 # coordinates are reversed for some reason
-                left_turrets = [[4,12],[3,12],[2,12],[1,12]]
+                left_turrets = [[4,12],[3,12]]
                 self.attempt_spawn_and_upgrade(game_state, left_turrets)
             else:
-                right_turrets = [[23,12],[24,12],[25,12],[26,12]]
+                right_turrets = [[23,12],[24,12]]
                 self.attempt_spawn_and_upgrade(game_state, right_turrets)
             
-        new_turrets = [[3,12],[24,12],[9,12],[18,12]]
+            self.is_edge_spam_threshold -= 0.75
+
+        if self.alot_edge_spam(game_state):
+            if self.right_health > self.left_health:
+                # coordinates are reversed for some reason
+                left_turrets = [[5,12]]
+                self.attempt_spawn_and_upgrade(game_state, left_turrets)
+            else:
+                right_turrets = [[22,12]]
+                self.attempt_spawn_and_upgrade(game_state, right_turrets)
+
+    def build_defences_stage_2(self, game_state):
+        turrets = [
+            [[3,12],[4,12],[5,12]],
+            [[24,12],[23,12],[22,12]],
+            [[13,12],[11,12],[16,12],[9,12],[18,12]]
+        ]
+
+        self.evenly_strengthen(turrets, [1.4,1.4,1],game_state)
+
+        new_turrets = [[9,12],[16,12],[3,12],[24,12],[18,12],[5,12]]
         self.attempt_spawn_and_upgrade(game_state, new_turrets)
-
-        # third turrets
-        third_turrets = [[5,12],[22,12]]
-        game_state.attempt_upgrade(third_turrets)
-
-        # final_turrets, edge_walls
-        edge_walls = [[0,13],[27,13],[1,13],[26,13],[2,13],[25,13]] 
+        edge_walls = [[0,13],[27,13],[1,13],[26,13],[2,13],[25,13]]
         for location in edge_walls:
             game_state.attempt_spawn(WALL,location)
             game_state.attempt_upgrade(location)
+        new_turrets_2 = [22,12],[2,12],[25,12]
+        self.attempt_spawn_and_upgrade(game_state, new_turrets_2)
+        
+        self.evenly_strengthen([self.left_final_turrets, self.right_final_turrets, self.middle_final_turrets],[1,1,1],game_state)
+        # now we can start opening holes
 
-        game_state.attempt_upgrade(third_turrets)
+        
+    def evenly_strengthen(self, turrets, multipliers, game_state):
+        # division for three sections is 8 and 18. 
+        # left: 0-8
+        # middle: 8-18
+        # right: 18-27
+        # strengthen the weakest part
 
-    def build_defences_stage_2(self, game_state):
-        pass
+        strengths = [self.left_health*multipliers[0], self.right_health*multipliers[1], self.middle_health*multipliers[2]]
+        weakest_index = strengths.index(min(strengths))
+        self.attempt_spawn_and_upgrade(game_state,turrets[weakest_index])
+
                 
     def attack(self, game_state):
-        attack_options = [[1,12],[2,11],[3,10],[4,9],[5,8],[6,7],[7,6],[8,5],[9,4],[10,3],[11,2],[12,1],[13,0],
-                          [14,0],[15,1],[16,2],[17,3],[18,4],[19,5],[20,6],[21,7],[22,8],[23,9],[24,10],[25,11],[26,12]]
+        # attack_options = [[0,13],[1,12],[2,11],[3,10],[4,9],[5,8],[6,7],[7,6],[8,5],[9,4],[10,3],[11,2],[12,1],[13,0],
+        #                   [14,0],[15,1],[16,2],[17,3],[18,4],[19,5],[20,6],[21,7],[22,8],[23,9],[24,10],[25,11],[26,12],[27,13]]
 
-        # def pick_support_location():
-        #     location = [self.attack_location[0], self.attack_location[1] + 1]
-        #     if not game_state.contains_stationary_unit(location) and game_state.in_arena_bounds(location):
-        #         return location
-            
-        #     if game_state.in_arena_bounds(location):
-        #         if self.attack_location[0] <= 13:
-        #             return [self.attack_location[0] + 1, self.attack_location[1]]
+        # attack_options = [[0,13],[5,8],[8,5],[19,5],[22,8],[27,13]]
+        attack_options = [[0,13],[5,8],[22,8],[27,13]]
 
-        if game_state.turn_number == self.start_attack_turn:
-            self.attacks_left -= 1
+        def pick_support_location():
+            if self.attack_location[1] == 0:
+                return [self.attack_location[0], self.attack_location[1] + 1]
+            if self.attack_location[1] == 5 or self.attack_location[1] == 8:
+                return [self.attack_location[0] + 
+                    (2 if self.attack_location[0] <= 13 else self.attack_location[0] - 2),
+                    self.attack_location[1]]
+            if self.attack_location[1] == 13:
+                return [self.attack_location[0] + 
+                    (1 if self.attack_location[0] <= 13 else self.attack_location[0] - 1),
+                    self.attack_location[1] - 1]
+            # path = game_state.find_path_to_edge(self.attack_location)
+            # for loc in path:
+            #     for dir in [[0,1],[0,-1],[1,0],[-1,0]]:
+            #         pos = [loc[0] + dir[0], loc[1] + dir[1]]
+            #         if game_state.game_map.in_arena_bounds(pos) \
+            #                 and not game_state.contains_stationary_unit([path[0][0] + dir[0], path[0][1] + dir[1]]) \
+            #                 and pos not in path:
+            #             return pos
 
-            self.attack_location = self.least_damage_spawn_location(game_state, attack_options)
+            # location = list(self.attack_location)
+            # location[0] += 1 if location[0] <= 13 else -1
+            # location[1] -= 1 if location[1] >= 1 else 0
+            return [10,10]
+
+        # if game_state.turn_number >= self.start_attack_turn:
+        #     self.attack_location = self.destroy_turrets_location(game_state, attack_options)
+        #     gamelib.debug_write("Attacking at " + str(self.attack_location))
+        #     if game_state.turn_number == self.start_attack_turn:
+        #         self.attack_location = random.choice(attack_options)
+        #         game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+        #     elif self.attack_location is not None:
+        #         game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+
+        #     if game_state.turn_number == self.start_attack_turn or \
+        #         self.attack_location is not None:
+        #             self.support_location = pick_support_location()
+        #             game_state.attempt_spawn(SUPPORT, self.support_location)
+        #             game_state.attempt_remove(self.support_location)
+
+        if game_state.turn_number >= self.start_attack_turn:
+            # self.attacks_left -= 1
+
+            # self.attack_location = self.destroy_turrets_location(game_state, attack_options)
+            self.attack_location = attack_options[self.weakest_quadrant(game_state)]
             game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
 
-            support_location = [self.attack_location[0], self.attack_location[1] + 1]
-            game_state.attempt_spawn(SUPPORT, support_location, 1)
-            # game_state.attempt_remove(support_location)
-        elif game_state.turn_number > self.start_attack_turn and game_state.turn_number % 2 == self.start_attack_turn % 2:
-            self.attacks_left -= 1
+            self.support_location = pick_support_location()
+            game_state.attempt_spawn(SUPPORT, self.support_location)
+            game_state.attempt_remove(self.support_location)
+            # gamelib.debug_write("Attacking at " + str(self.attack_location) + " with support at " + str(self.support_location))
 
-            game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+            # self.last_attack = game_state.turn_number
+
+            self.start_attack_turn = int(game_state.turn_number + random.randint(2, 3))
+
+        # elif game_state.turn_number > self.start_attack_turn and game_state.turn_number == self.last_attack + 3:
+        #     self.attacks_left -= 1
+
+        #     game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
  
-            support_location = [self.attack_location[0], self.attack_location[1] + 1]
-            game_state.attempt_spawn(SUPPORT, support_location, 1)
-            game_state.attempt_remove(support_location)
+        #     game_state.attempt_spawn(SUPPORT, self.support_location)
 
-        if self.attacks_left == 0:
-            support_location = [self.attack_location[0], self.attack_location[1] + 1]
-            game_state.attempt_remove(support_location)
-            
-            self.attack_location = None
-            self.start_attack_turn = game_state.turn_number + 4
-            self.attacks_left = 3
+        #     self.last_attack = game_state.turn_number
+
+        #     if self.attacks_left == 0:
+        #         game_state.attempt_remove(self.support_location)
+
+        #         self.attack_location = None
+        #         self.start_attack_turn = game_state.turn_number + 3
+        #         self.attacks_left = 1
 
     def is_edge_spam(self, game_state):
         # check for support at the back 
         for location in self.back_support_locations:
             if game_state.contains_stationary_unit(location):
                 self.is_edge_spam_threshold += 1
+                break
 
         # variable is updated if they spam scouts in the back
         
-        if self.is_edge_spam_threshold + self.is_left_edge_spam + self.is_right_edge_spam >= 3: 
+        if self.is_edge_spam_threshold + self.is_left_edge_spam + self.is_right_edge_spam >= 2: 
+            return True
+        else:
+            return False
+    
+    def alot_edge_spam(self, game_state):
+        # check for support at the back 
+        for location in self.back_support_locations:
+            if game_state.contains_stationary_unit(location):
+                self.is_edge_spam_threshold += 1
+                break
+            
+        if self.is_edge_spam_threshold + self.is_left_edge_spam + self.is_right_edge_spam >= 2.75:
             return True
         else:
             return False
 
+    def weakest_quadrant(self, game_state):
+        quadrants = [0,0,0,0]
 
+        for location in game_state.game_map:
+            if game_state.contains_stationary_unit(location):
+                for unit in game_state.game_map[location]:
+                    if unit.player_index == 1:
+                        quadrants[unit.x//7] += 1.0 if unit.upgraded else 0.4
+
+        return quadrants.index(min(quadrants))
+
+    def destroy_turrets_location(self, game_state, location_options):
+        importance = []
+        start_units = game_state.MP - 2 # leeway for 2+ survivers
+        for location in location_options:
+            path = game_state.find_path_to_edge(location)
+            if path is None or path[-1] in game_state.game_map.get_edge_locations(game_state.get_target_edge(location)):
+                importance.append(-1)
+                continue
+            clone_state = game_state.deepclone()
+            units_health = start_units * 12
+
+            destroyed = False
+            for path_location in path:
+                attackers = clone_state.get_attackers(path_location,0)
+                units_health -= len(attackers) * gamelib.GameUnit(TURRET, clone_state.config).damage_i
+
+                target = clone_state.get_target(GameUnit(SCOUT, clone_state.config))
+                num_units = (units_health + 11) // 12
+
+                if units_health <= 0:
+                    break
+
+                if target is not None:
+                    # decrease target health
+                    clone_state.game_map[target.x][target.y] -= num_units * 2 
+                    if clone_state.game_map[target.x][target.y] <= 0:
+                        # remove from map
+                        clone_state.game_map.remove_unit([target.x, target.y])
+                        if target.unit_type == TURRET:
+                            destroyed = True
+
+            importance.append(1 if destroyed else 0)
+        if max(importance) <= 0:
+            return None
+        return location_options[importance.index(max(importance))]
 
     def least_damage_spawn_location(self, game_state, location_options): 
         """
@@ -203,16 +360,22 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Get the damage estimate each path will take
         for location in location_options:
             path = game_state.find_path_to_edge(location)
-            try:
+
+            # gamelib.debug_write(f'{location} : {path}')
+            if path is not None and path[-1] in game_state.game_map.get_edge_locations(game_state.get_target_edge(location)):
                 damage = 0
                 for path_location in path:
                     attackers = game_state.get_attackers(path_location, 0)
                     # Get number of enemy turrets that can attack each location and multiply by turret damage
                     damage += len(attackers) * gamelib.GameUnit(TURRET, game_state.config).damage_i
-                damages.append(damage)
-            except:
-                damages.append(10000)
-        
+                damages.append([damage, location[1]]) # compare by damage then location
+            else:
+                damages.append([10000, location[1]])
+
+        # gamelib.debug_write(f'========= Least damage spawn location : {location_options[damages.index(min(damages))]} ==========')
+        # for i in range(len(damages)):
+        #     gamelib.debug_write(f'{location_options[i]} : {damages[i]}')
+
         # Now just return the location that takes the least damage
         return location_options[damages.index(min(damages))]
 
@@ -259,43 +422,72 @@ class AlgoStrategy(gamelib.AlgoCore):
             if unit_owner_self:
                 region = location[0] // 8
                 self.damaged_regions[region] += damage[1]
-
-        turn_info = state["turnInfo"]
-        if self.prev_turn_info==0 and turn_info==1:
-            spawns = events['spawn']
-            num_left_scouts_spawned = 0
-            num_right_scouts_spawned = 0
-            for spawn in spawns:
-                # scout spawned in their back
-                if spawn[1]==3 and spawn[0][1] >= 23:
-                    if spawn[0][0] <= 13 :
-                        num_left_scouts_spawned +=1
-                    else:
-                        num_right_scouts_spawned +=1                        
-            
-            if num_left_scouts_spawned >= 5:
-                self.is_left_edge_spam += 1
-            elif num_right_scouts_spawned >= 5:
-                self.is_right_edge_spam += 1
-
-
         
-        # gamelib.debug_write("Damages: {}".format(self.damaged_regions))
+        self.analyze_enemy_moves_and_our_defense(state, events)
 
-    
+    def analyze_enemy_moves_and_our_defense(self, state, events):
+        spawns = events['spawn']
+        num_left_scouts_spawned = num_right_scouts_spawned = num_middle_scouts_spawned = 0
+        self.is_left_edge_spam = self.is_right_edge_spam = 0
+
+        for spawn in spawns:
+            if spawn[1] == 3:
+                if spawn[0][1] >= 22:
+                    if spawn[0][0] <= 13:
+                        num_left_scouts_spawned += 1
+                    else:
+                        num_right_scouts_spawned += 1
+                elif 20 <= spawn[0][1] <= 23:
+                    num_middle_scouts_spawned += 1
+
+        if num_left_scouts_spawned >= 5:
+            self.is_left_edge_spam += 1 
+        if num_right_scouts_spawned >= 5:
+            self.is_right_edge_spam += 1 
+        if num_middle_scouts_spawned >= 5:
+            self.is_middle_spam += 1
+        # assess at the end of action --> going into deploy phase
+        # get the health of middle left and right
+        # turret health is 3x more valuable than wall healths
+
+        self.left_health = 0
+        self.right_health = 0
+        self.middle_health = 0
+        units = state["p1Units"]
+        walls= units[0]
+        turrets = units[2]
+
+        for wall in walls:
+            if wall[1]==13:
+                if wall[0] < 8:
+                    self.left_health += wall[2]
+                elif wall[0] >= 8 and wall[0] <= 18:
+                    self.middle_health += wall[2]
+                else:
+                    self.right_health += wall[2]
+        for turret in turrets:
+            if turret[1]==12:
+                if turret[0] < 8:
+                    self.left_health += turret[2]*3
+                elif turret[0] >= 8 and turret[0] <= 18:
+                    self.middle_health += turret[2]*3
+                else:
+                    self.right_health += turret[2]*3   
+
+
     def attempt_spawn_and_upgrade(self, game_state, locations):
         for location in locations:
-            choice = random.randint(0,1)
-            if choice == 0:
-                game_state.attempt_spawn(TURRET,location)
-                game_state.attempt_upgrade(location)
-                game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-                game_state.attempt_upgrade([location[0], location[1] + 1])
-            else:
-                game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-                game_state.attempt_upgrade([location[0], location[1] + 1])
-                game_state.attempt_spawn(TURRET,location)
-                game_state.attempt_upgrade(location)
+            # choice = random.randint(0,1)
+            # if choice == 0:
+            game_state.attempt_spawn(TURRET,location)
+            game_state.attempt_upgrade(location)
+            game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
+            game_state.attempt_upgrade([location[0], location[1] + 1])
+            # else:
+            #     game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
+            #     game_state.attempt_upgrade([location[0], location[1] + 1])
+            #     game_state.attempt_spawn(TURRET,location)
+            #     game_state.attempt_upgrade(location)
 
 if __name__ == "__main__":
     algo = AlgoStrategy() 

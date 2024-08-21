@@ -4,6 +4,18 @@ import sys
 import queue
 from .util import debug_write
 
+'''
+UP or FWD
+
+prev defaults to FWD (on 1st move)
+
+if UP and FWD blocked: impossible
+if UP or FWD blocked: go whats not blocked
+if prev == UP: go FWD
+if prev == FWD: go UP
+
+'''
+
 class Node:
     """A path-finding node
 
