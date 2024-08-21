@@ -106,19 +106,24 @@ class AlgoStrategy(gamelib.AlgoCore):
         # More community tools available at: https://terminal.c1games.com/rules#Download
 
         # # Place turrets that attack enemy units
-        turret_locations = [[4,13],[5,13],[13,13],[22,13],[23,13]]
+        turret_locations = [[4,13],[5,13],[14,13],[22,13],[23,13]]
         game_state.attempt_spawn(TURRET, turret_locations)
         game_state.attempt_upgrade(turret_locations)
 
-        turret_locations_2 = [[14,13],[3,13],[24,13],[13,12]]
-        game_state.attempt_spawn(TURRET, turret_locations_2)
-        game_state.attempt_upgrade([[14,13],[3,13]]) # mid & left
-        game_state.attempt_spawn(TURRET, [[14,12]])
-        game_state.attempt_upgrade([[24,13],[13,12]]) # right & mid
+        turret_locations_2 = [[13,13],[3,13]]
+        self.attempt_spawn_and_upgrade(turret_locations_2)
+        self.attempt_spawn_and_upgrade([[24,13]])
+
+
         game_state.attempt_spawn(TURRET, [[6,13]])
         game_state.attempt_upgrade([[6,13],[14,12]])
         game_state.attempt_spawn(TURRET, [[21,13]])
         game_state.attempt_upgrade([[21,13]])
+
+    def attempt_spawn_and_upgrade(game_state, locations):
+        for location in locations:
+            game_state.atempt_spawn(TURRET, location)
+            game_state.attempt_upgrade(location)
 
     def random_valid_attack(self, game_state, location_options):
         """

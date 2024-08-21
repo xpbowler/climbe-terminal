@@ -217,95 +217,35 @@ class AlgoStrategy(gamelib.AlgoCore):
         # More community tools available at: https://terminal.c1games.com/rules#Download
 
         # # Place turrets that attack enemy units
-        turret_locations = [[4,13],[5,13],[13,13],[22,13],[23,13]]
+        turret_locations = [[4,13],[5,13],[14,13],[22,13],[23,13]]
         game_state.attempt_spawn(TURRET, turret_locations)
         game_state.attempt_upgrade(turret_locations)
 
-        turret_locations_2 = [[14,13],[3,13],[24,13],[13,12]]
-        game_state.attempt_spawn(TURRET, turret_locations_2)
-        game_state.attempt_upgrade([[14,13],[3,13]]) # mid & left
-        game_state.attempt_spawn(TURRET, [[14,12]])
-        game_state.attempt_upgrade([[24,13],[13,12]]) # right & mid
-        game_state.attempt_spawn(TURRET, [[6,13]])
-        game_state.attempt_upgrade([[6,13],[14,12]])
-        game_state.attempt_spawn(TURRET, [[2,13]])
-        game_state.attempt_upgrade([[21,13]])
+        turret_locations_2 = [[13,13],[3,13]]
+        self.attempt_spawn_and_upgrade(turret_locations_2)
+        self.attempt_spawn_and_upgrade([[24,13]])
+        self.attempt_spawn_and_upgrade([[12,12],[15,12]])
+        self.attempt_spawn_and_upgrade([[6,13],[21,13]])
 
     def adaptive_defence(self, game_state):
         pass
 
     def build_defences_stage_2(self, game_state):
         turrets = [
-            [[3,12],[4,12],[5,12]],
-            [[24,12],[23,12],[22,12]],
-            [[13,12],[11,12],[16,12],[9,12],[18,12]]
+            [[2,13]],
+            [[25,13]],
+            [[11,12],[16,12]]
         ]
 
-        self.evenly_strengthen(turrets, [1.4,1.4,1],game_state)
-
-        new_turrets = [[9,12],[16,12],[3,12],[24,12],[18,12],[5,12]]
-        self.attempt_spawn_and_upgrade(game_state, new_turrets)
-        edge_walls = [[0,13],[27,13],[1,13],[26,13],[2,13],[25,13]]
-        for location in edge_walls:
-            game_state.attempt_spawn(WALL,location)
-            game_state.attempt_upgrade(location)
-        new_turrets_2 = [22,12],[2,12],[25,12]
-        self.attempt_spawn_and_upgrade(game_state, new_turrets_2)
+        self.evenly_strengthen(turrets, [1,1,1],game_state)
         
         self.evenly_strengthen([self.left_final_turrets, self.right_final_turrets, self.middle_final_turrets],[1,1,1],game_state)
         # now we can start opening holes
 
     def attempt_spawn_and_upgrade(self, game_state, locations):
         for location in locations:
-            # choice = random.randint(0,1)
-            # if choice == 0:
             game_state.attempt_spawn(TURRET,location)
             game_state.attempt_upgrade(location)
-            game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-            game_state.attempt_upgrade([location[0], location[1] + 1])
-            # else:
-            #     game_state.attempt_spawn(WALL,[location[0], location[1] + 1])
-            #     game_state.attempt_upgrade([location[0], location[1] + 1])
-            #     game_state.attempt_spawn(TURRET,location)
-            #     game_state.attempt_upgrade(location)
-
-    def random_valid_attack(self, game_state, location_options):
-        """
-        This function will help us guess which location is the safest to spawn moving units from.
-        It gets the path the unit will take then checks locations on that path to 
-        estimate the path's damage risk.
-        """
-        damages = []
-        # Get the damage estimate each path will take
-        for location in location_options:
-            path = game_state.find_path_to_edge(location)
-            damage = 0
-            for path_location in path:
-                # Get number of enemy turrets that can attack each location and multiply by turret damage
-                damage += len(game_state.get_attackers(path_location, 0)) * gamelib.GameUnit(TURRET, game_state.config).damage_i
-            damages.append(damage)
-        
-        # Now just return the location that takes the least damage
-        return location_options[damages.index(min(damages))]
-
-    def least_damage_spawn_location(self, game_state, location_options):
-        """
-        This function will help us guess which location is the safest to spawn moving units from.
-        It gets the path the unit will take then checks locations on that path to 
-        estimate the path's damage risk.
-        """
-        damages = []
-        # Get the damage estimate each path will take
-        for location in location_options:
-            path = game_state.find_path_to_edge(location)
-            damage = 0
-            for path_location in path:
-                # Get number of enemy turrets that can attack each location and multiply by turret damage
-                damage += len(game_state.get_attackers(path_location, 0)) * gamelib.GameUnit(TURRET, game_state.config).damage_i
-            damages.append(damage)
-        
-        # Now just return the location that takes the least damage
-        return location_options[damages.index(min(damages))]
 
     def detect_enemy_unit(self, game_state, unit_type=None, valid_x = None, valid_y = None):
         total_units = 0
