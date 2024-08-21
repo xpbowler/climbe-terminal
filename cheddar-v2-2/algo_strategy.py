@@ -127,17 +127,22 @@ class AlgoStrategy(gamelib.AlgoCore):
         # basic initial defense
         # change from 4,12 and 23, 12 to 3,12 and 24,12
         # this is meant to counter the meta
-        turrets = [[10,12],[17,12],[3,12],[24,12]]
-        walls = [[3,13],[24,13],[10,13],[17,13]]
+        turrets = [[10,11],[17,11],[3,12],[24,12]]
+        turrets_2 = [[9,11],[18,11]]
+        walls = [[10,12],[17,12]]
+        walls_2 = [[3,13],[24,13]]
         
         game_state.attempt_spawn(TURRET, turrets)
-        game_state.attempt_spawn(WALL, walls)
         game_state.attempt_upgrade(turrets)
+        game_state.attempt_spawn(TURRET, turrets_2)
+        game_state.attempt_spawn(WALL, walls_2)
+        game_state.attempt_upgrade(walls_2)
+        game_state.attempt_spawn(WALL, walls)
         game_state.attempt_upgrade(walls)
 
         if self.is_middle_spam >= 2:
             # beef up the middle
-            middle_turrets = [[11,12],[16,12]]
+            middle_turrets = [[12,12],[15,12]]
             self.attempt_spawn_and_upgrade(game_state, middle_turrets)
             self.is_middle_spam -= 1
 
@@ -309,8 +314,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         for location in game_state.game_map:
             if game_state.contains_stationary_unit(location):
                 for unit in game_state.game_map[location]:
-                    if unit.player_index == 1:
-                        quadrants[unit.x//7] += 1.0 if unit.upgraded else 0.4
+                    if unit.player_index == 1 and unit.unit_type == TURRET:
+                        quadrants[unit.x//7] += 1.0*(unit.health/75) if unit.upgraded else 0.5*(unit.health/75)
 
         return quadrants.index(min(quadrants))
 

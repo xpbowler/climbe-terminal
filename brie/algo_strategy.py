@@ -44,6 +44,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         # This is a good place to do initial setup
         self.scored_on_locations = []
 
+
+        self.scored_on_locations = []
+        self.to_upgrade = []
+
+
+        self.attack_location = None
+        self.start_attack_turn = 1
+
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -77,25 +85,90 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.build_defences(game_state)
 
     def attack(self, game_state):
-        attack_options = [[27,13,26,12],[0,13,1,12],[14,0,13,2],[13,0,14,2]]
-        if game_state.turn_number <= 7:
-            if game_state.turn_number%2 == 1:
-                attack = attack_options[game_state.turn_number // 2]
-                scout_location = attack[:2]
-                support_location = attack[2:]
+        attack_options = [[0,13],[5,8],[22,8],[27,13]]
 
-                game_state.attempt_spawn(SCOUT, scout_location, 1000)
-                game_state.attempt_spawn(SUPPORT, support_location)
-                game_state.attempt_remove(support_location)
-        elif game_state.turn_number >= 10:
-            if game_state.turn_number%3 == 10%3:
-                attack = random.choice(attack_options) # or random?
-                scout_location = attack[:2]
-                support_location = attack[2:]
+        def pick_support_location():
+            if self.attack_location[1] == 0:
+                return [self.attack_location[0], self.attack_location[1] + 1]
+            if self.attack_location[1] == 5 or self.attack_location[1] == 8:
+                return [self.attack_location[0] + 
+                    (2 if self.attack_location[0] <= 13 else self.attack_location[0] - 2),
+                    self.attack_location[1]]
+            if self.attack_location[1] == 13:
+                return [self.attack_location[0] + 
+                    (1 if self.attack_location[0] <= 13 else self.attack_location[0] - 1),
+                    self.attack_location[1] - 1]
+            # path = game_state.find_path_to_edge(self.attack_location)
+            # for loc in path:
+            #     for dir in [[0,1],[0,-1],[1,0],[-1,0]]:
+            #         pos = [loc[0] + dir[0], loc[1] + dir[1]]
+            #         if game_state.game_map.in_arena_bounds(pos) \
+            #                 and not game_state.contains_stationary_unit([path[0][0] + dir[0], path[0][1] + dir[1]]) \
+            #                 and pos not in path:
+            #             return pos
 
-                game_state.attempt_spawn(SCOUT, scout_location, 1000)
-                game_state.attempt_spawn(SUPPORT, support_location)
-                game_state.attempt_remove(support_location)
+            # location = list(self.attack_location)
+            # location[0] += 1 if location[0] <= 13 else -1
+            # location[1] -= 1 if location[1] >= 1 else 0
+            return [10,10]
+
+        # if game_state.turn_number >= self.start_attack_turn:
+        #     self.attack_location = self.destroy_turrets_location(game_state, attack_options)
+        #     gamelib.debug_write("Attacking at " + str(self.attack_location))
+        #     if game_state.turn_number == self.start_attack_turn:
+        #         self.attack_location = random.choice(attack_options)
+        #         game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+        #     elif self.attack_location is not None:
+        #         game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+
+        #     if game_state.turn_number == self.start_attack_turn or \
+        #         self.attack_location is not None:
+        #             self.support_location = pick_support_location()
+        #             game_state.attempt_spawn(SUPPORT, self.support_location)
+        #             game_state.attempt_remove(self.support_location)
+
+        if game_state.turn_number >= self.start_attack_turn:
+            # self.attacks_left -= 1
+
+            # self.attack_location = self.destroy_turrets_location(game_state, attack_options)
+            self.attack_location = attack_options[self.weakest_quadrant(game_state)]
+            game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+
+            self.support_location = pick_support_location()
+            game_state.attempt_spawn(SUPPORT, self.support_location)
+            game_state.attempt_remove(self.support_location)
+            # gamelib.debug_write("Attacking at " + str(self.attack_location) + " with support at " + str(self.support_location))
+
+            # self.last_attack = game_state.turn_number
+
+            self.start_attack_turn = int(game_state.turn_number + 2)
+
+        # elif game_state.turn_number > self.start_attack_turn and game_state.turn_number == self.last_attack + 3:
+        #     self.attacks_left -= 1
+
+        #     game_state.attempt_spawn(SCOUT, self.attack_location, 10000)
+ 
+        #     game_state.attempt_spawn(SUPPORT, self.support_location)
+
+        #     self.last_attack = game_state.turn_number
+
+        #     if self.attacks_left == 0:
+        #         game_state.attempt_remove(self.support_location)
+
+        #         self.attack_location = None
+        #         self.start_attack_turn = game_state.turn_number + 3
+        #         self.attacks_left = 1
+
+    def weakest_quadrant(self, game_state):
+        quadrants = [0,0,0,0]
+
+        for location in game_state.game_map:
+            if game_state.contains_stationary_unit(location):
+                for unit in game_state.game_map[location]:
+                    if unit.player_index == 1 and unit.unit_type == TURRET:
+                        quadrants[unit.x//7] += 1.0*(unit.health/75) if unit.upgraded else 0.5*(unit.health/75)
+
+        return quadrants.index(min(quadrants))
 
     def build_defences(self, game_state):
         """
