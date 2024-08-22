@@ -77,25 +77,35 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.build_defences(game_state)
 
     def attack(self, game_state):
-        attack_options = [[27,13,26,12],[0,13,1,12],[14,0,13,2],[13,0,14,2]]
-        if game_state.turn_number <= 7:
-            if game_state.turn_number%2 == 1:
-                attack = attack_options[game_state.turn_number // 2]
-                scout_location = attack[:2]
-                support_location = attack[2:]
+        attack_options = [[20,6],[7,6]]
 
-                game_state.attempt_spawn(SCOUT, scout_location, 1000)
-                game_state.attempt_spawn(SUPPORT, support_location)
-                game_state.attempt_remove(support_location)
-        elif game_state.turn_number >= 10:
-            if game_state.turn_number%3 == 10%3:
-                attack = random.choice(attack_options) # or random?
-                scout_location = attack[:2]
-                support_location = attack[2:]
+        strength_factor = 1.2
+        in_middle = 0
+        for location in game_state.game_map:
+            if game_state.contains_stationary_unit(location):
+                for unit in game_state.game_map[location]:
+                    if unit.player_index == 1 and unit.unit_type == TURRET:
+                        if unit.x >= 9 and unit.x <= 18:
+                            in_middle += 1.0*(strength_factor*unit.health/75) if unit.upgraded else 0.5*(strength_factor*unit.health/75)
 
-                game_state.attempt_spawn(SCOUT, scout_location, 1000)
-                game_state.attempt_spawn(SUPPORT, support_location)
-                game_state.attempt_remove(support_location)
+        full_turrets = game_state.get_resource(0, 1) // 8
+        half_turrets = (game_state.get_resource(0, 1) - (full_turrets * 8)) // 3
+        in_middle += 1.0*full_turrets + 0.5*half_turrets
+
+        mp = game_state.get_resource(1, 0)
+        if mp < 8:
+            return
+        if in_middle >= 2 and mp < 10:
+            return
+        if in_middle >= 2.5 and mp < 12:
+            return
+
+        # go middle from left or right
+        attack_location = attack_options[game_state.turn_number % 2]
+        game_state.attempt_spawn(SCOUT, attack_location, 10000)
+        support_location = [attack_location[0] - 1 if game_state.turn_number % 2 == 0 else attack_location[0] + 1, attack_location[1]]
+        game_state.attempt_spawn(SUPPORT, support_location, 10000)
+        game_state.attempt_remove(attack_location)
 
     def build_defences(self, game_state):
         """
@@ -106,24 +116,16 @@ class AlgoStrategy(gamelib.AlgoCore):
         # More community tools available at: https://terminal.c1games.com/rules#Download
 
         # # Place turrets that attack enemy units
-        turret_locations = [[4,13],[5,13],[14,13],[22,13],[23,13]]
-        game_state.attempt_spawn(TURRET, turret_locations)
-        game_state.attempt_upgrade(turret_locations)
+        round_1 = [[5,13],[13,12],[22,13]]
+        round_2 = [[4,13],[14,12],[23,13]]
+        round_3 = [[3,13],[13,11],[24,13]]
+        round_4 = [[6,13],[14,11],[21,13]]
 
-        turret_locations_2 = [[13,13],[3,13]]
-        self.attempt_spawn_and_upgrade(game_state, turret_locations_2)
-        self.attempt_spawn_and_upgrade(game_state, [[24,13]])
-
-
-        game_state.attempt_spawn(TURRET, [[6,13]])
-        game_state.attempt_upgrade([[6,13],[14,12]])
-        game_state.attempt_spawn(TURRET, [[21,13]])
-        game_state.attempt_upgrade([[21,13]])
-
-    def attempt_spawn_and_upgrade(game_state, locations):
-        for location in locations:
-            game_state.attempt_spawn(TURRET, location)
-            game_state.attempt_upgrade(location)
+        all_rounds = [round_1, round_2, round_3, round_4]
+        for round in all_rounds:
+            for location in round: # TODO: spawn & upgrade turrets in areas that get damaged more recently
+                game_state.attempt_spawn(TURRET, location)
+                game_state.attempt_upgrade(location)
 
     def random_valid_attack(self, game_state, location_options):
         """

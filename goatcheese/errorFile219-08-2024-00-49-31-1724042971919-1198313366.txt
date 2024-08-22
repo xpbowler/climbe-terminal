@@ -1,0 +1,10 @@
+Random seed: 3912782568736847298
+---------------- Starting Your Algo --------------------
+Traceback (most recent call last):
+  File "/u2/e256zhang/climbe-terminal/python-algo/algo_strategy.py", line 238, in <module>
+    algo.start()
+  File "/u2/e256zhan/climbe-terminal/python-algo/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/u2/e256zhan/climbe-terminal/python-algo/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt

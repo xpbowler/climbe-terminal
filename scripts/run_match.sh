@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "Run Match"
-defaultAlgo=$PWD/brie
+defaultAlgo=$PWD/goatcheese
 anotherAlgo=$PWD/cheddar-v2-2
 
 algo1=${1:-${defaultAlgo}}
